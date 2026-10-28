@@ -62,7 +62,26 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      # NEW: Automatically upload PDF to Slack
+      # Verify Slack configuration without exposing credentials
+      - name: Verify Slack Configuration
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+        run: |
+          if [ -n "$SLACK_BOT_TOKEN" ]; then
+            echo "SLACK_BOT_TOKEN: Configured"
+          else
+            echo "SLACK_BOT_TOKEN: Missing"
+          fi
+
+          if [ -n "$SLACK_CHANNEL_ID" ]; then
+            echo "SLACK_CHANNEL_ID: Configured"
+          else
+            echo "SLACK_CHANNEL_ID: Missing"
+          fi
+
+      # Automatically upload PDF to Slack
       - name: Send PDF Report to Slack
         if: always()
         env:
