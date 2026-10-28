@@ -26,10 +26,19 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Execute Smoke Tests
+            - name: Execute Smoke Tests
         id: playwright
         continue-on-error: true
-        run: npx playwright test
+        run: |
+          mkdir -p test-results
+          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/results.json npx playwright test --reporter=html,json
+
+      - name: Verify JSON Report
+        if: always()
+        run: |
+          echo "Checking Playwright JSON report..."
+          ls -lah test-results/
+          test -f test-results/results.json
 
       - name: Generate PDF Report
         if: always()
