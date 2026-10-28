@@ -1,38 +1,21 @@
-name: Playwright Smoke Tests
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  smoke-tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
       - name: Execute Smoke Tests
+        id: playwright
         run: npx playwright test
+        continue-on-error: true
 
-      - name: Upload Playwright Report
+      - name: Generate PDF Report
+        if: always()
+        run: node scripts/generate-report.cjs
+
+      - name: Upload PDF Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: smoke-test-pdf
+          path: reports/smoke-test-report.pdf
           retention-days: 7
           if-no-files-found: warn
+
+      - name: Mark Workflow Failed If Tests Failed
+        if: steps.playwright.outcome == 'failure'
+        run: exit 1
