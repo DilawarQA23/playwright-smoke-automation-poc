@@ -62,7 +62,6 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      # Verify Slack configuration without exposing credentials
       - name: Verify Slack Configuration
         if: always()
         env:
@@ -81,12 +80,11 @@ jobs:
             echo "SLACK_CHANNEL_ID: Missing"
           fi
 
-      # Automatically upload PDF to Slack
       - name: Send PDF Report to Slack
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
         run: node scripts/upload-to-slack.cjs
 
       - name: Mark Workflow Failed If Tests Failed
