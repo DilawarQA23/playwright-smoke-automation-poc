@@ -1,22 +1,29 @@
 name: Playwright Smoke Tests
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Simulated Production Deployment
+    types:
+      - completed
     branches:
       - main
+
   workflow_dispatch:
 
 jobs:
   smoke-tests:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-    with:
-      ref: qa-automation
-        
+        with:
+          ref: qa-automation
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
