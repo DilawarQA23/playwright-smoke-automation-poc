@@ -34,14 +34,15 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+         run: npx playwright install --with-deps chromium
+        
 
       - name: Execute Smoke Tests
         id: playwright
         continue-on-error: true
         run: |
           mkdir -p test-results
-          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/results.json npx playwright test --reporter=html,json
+          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/results.json npx playwright test --project=chromium --reporter=html,json
 
       - name: Verify JSON Report
         if: always()
