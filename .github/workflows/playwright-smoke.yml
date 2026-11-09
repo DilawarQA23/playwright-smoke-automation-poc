@@ -1,0 +1,103 @@
+name: Playwright Smoke Tests
+
+on:
+  workflow_run:
+    workflows:
+      - Simulated Production Deployment
+    types:
+      - completed
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  smoke-tests:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: qa-automation
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        
+
+      - name: Execute Smoke Tests
+        id: playwright
+        continue-on-error: true
+        run: |
+          mkdir -p test-results
+          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/results.json npx playwright test --project=chromium --reporter=html,json
+
+      - name: Verify JSON Report
+        if: always()
+        run: |
+          echo "Checking JSON report..."
+          ls -lah test-results/
+          test -f test-results/results.json
+
+      - name: Generate PDF Report
+        if: always()
+        run: node scripts/generate-report.cjs
+
+      - name: Upload HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload PDF Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-pdf
+          path: reports/smoke-test-report.pdf
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Verify Slack Configuration
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        run: |
+          if [ -n "$SLACK_BOT_TOKEN" ]; then
+            echo "SLACK_BOT_TOKEN: Configured"
+          else
+            echo "SLACK_BOT_TOKEN: Missing"
+          fi
+
+          if [ -n "$SLACK_CHANNEL_ID" ]; then
+            echo "SLACK_CHANNEL_ID: Configured"
+          else
+            echo "SLACK_CHANNEL_ID: Missing"
+          fi
+
+      - name: Send PDF Report to Slack
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        run: node scripts/upload-to-slack.cjs
+
+      - name: Mark Workflow Failed If Tests Failed
+        if: steps.playwright.outcome == 'failure'
+        run: exit 1
